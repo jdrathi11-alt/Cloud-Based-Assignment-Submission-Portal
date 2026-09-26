@@ -1,0 +1,13 @@
+.env
+*.pyc
+__pycache__/
+*.db
+portal.db
+backend/uploads/
+backend/test_uploads/
+frontend/node_modules/
+frontend/dist/
+.vscode/
+.DS_Store
+
+backend/venv/

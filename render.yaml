@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cloud-assignment-portal-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: ENVIRONMENT
+        value: cloud
+      - key: AUTH_MODE
+        value: supabase
+      - key: STORAGE_MODE
+        value: supabase
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: assignment-submissions
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ALLOW_LATE_SUBMISSIONS
+        value: true
+      - key: ALLOW_TEACHER_SIGNUP
+        value: true
