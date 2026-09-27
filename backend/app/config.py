@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 10
     allow_late_submissions: bool = True
     allow_teacher_signup: bool = True
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,https://frontend-six-jet-64.vercel.app"
     supabase_url: str | None = None
     supabase_anon_key: str | None = None
     supabase_service_role_key: str | None = None
