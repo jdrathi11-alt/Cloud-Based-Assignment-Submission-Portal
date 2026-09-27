@@ -21,23 +21,75 @@ def check_file(upload: UploadFile, assignment: Assignment, size: int):
     if size > assignment.max_file_size_mb * 1024 * 1024: raise HTTPException(413, "File exceeds assignment size limit")
 
 @router.post("/assignments/{assignment_id}/submit", response_model=SubmissionOut)
-async def submit_assignment(assignment_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), student=Depends(require_role("student"))):
+async def submit_assignment(
+    assignment_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    student=Depends(require_role("student"))
+):
     a = db.get(Assignment, assignment_id)
-    if not a: raise HTTPException(404, "Assignment not found")
+    if not a:
+        raise HTTPException(404, "Assignment not found")
+
     now = datetime.now(timezone.utc)
-    existing = db.query(Submission).filter_by(assignment_id=assignment_id, student_id=student.id).first()
-    if existing and existing.submission_status == "GRADED": raise HTTPException(409, "Graded submissions cannot be resubmitted")
+
+    deadline = a.deadline
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=timezone.utc)
+    else:
+        deadline = deadline.astimezone(timezone.utc)
+
+    existing = db.query(Submission).filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id
+    ).first()
+
+    if existing and existing.submission_status == "GRADED":
+        raise HTTPException(409, "Graded submissions cannot be resubmitted")
+
     content = await file.read()
     check_file(file, a, len(content))
-    if now > a.deadline and not settings.allow_late_submissions: raise HTTPException(400, "Deadline has passed")
+
+    if now > deadline and not settings.allow_late_submissions:
+        raise HTTPException(400, "Deadline has passed")
+
     storage = StorageService()
-    path, url = storage.upload(content, file.filename, assignment_id, student.id)
-    status = "LATE" if now > a.deadline else "SUBMITTED"
+    path, url = storage.upload(
+        content,
+        file.filename,
+        assignment_id,
+        student.id
+    )
+
+    status = "LATE" if now > deadline else "SUBMITTED"
+
     if existing:
-        existing.file_name=file.filename; existing.storage_path=path; existing.file_url=url; existing.submitted_at=now; existing.submission_status=status; existing.marks=None; existing.feedback=None; existing.graded_at=None
-        db.commit(); db.refresh(existing); return existing
-    sub = Submission(assignment_id=assignment_id, student_id=student.id, file_name=file.filename, storage_path=path, file_url=url, submitted_at=now, submission_status=status)
-    db.add(sub); db.commit(); db.refresh(sub); return sub
+        existing.file_name = file.filename
+        existing.storage_path = path
+        existing.file_url = url
+        existing.submitted_at = now
+        existing.submission_status = status
+        existing.marks = None
+        existing.feedback = None
+        existing.graded_at = None
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    sub = Submission(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        file_name=file.filename,
+        storage_path=path,
+        file_url=url,
+        submitted_at=now,
+        submission_status=status
+    )
+
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+    return sub
 
 @router.get("/submissions/me", response_model=list[SubmissionOut])
 def my_submissions(db: Session = Depends(get_db), student=Depends(require_role("student"))):
