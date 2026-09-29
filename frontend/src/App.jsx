@@ -4,7 +4,15 @@ import './styles.css';
 
 function Auth({onLogin}){
  const [mode,setMode]=useState('login'),[form,setForm]=useState({name:'',email:'',password:'',role:'student'}),[error,setError]=useState('');
- async function submit(e){e.preventDefault();setError('');try{const d=await api(`/api/${mode==='login'?'login':'register'}`,{method:'POST',body:form});onLogin(d)}catch(e){setError(e.message)}}
+ async function submit(e){e.preventDefault();setError('');try{const d=await api(`/api/${mode==='login'?'login':'register'}`,{method:'POST',body:form});onLogin(d)}catch(e){
+  if (Array.isArray(e?.detail)) {
+    setError(e.detail.map(x => x.msg || JSON.stringify(x)).join(", "));
+  } else if (e?.detail) {
+    setError(String(e.detail));
+  } else {
+    setError(e?.message || "Something went wrong");
+  }
+}}
  return <div className="auth"><div className="card"><h1>Assignment Portal</h1><p className="muted">Cloud Computing Project</p><div className="tabs"><button className={mode==='login'?'active':''} onClick={()=>setMode('login')}>Login</button><button className={mode==='register'?'active':''} onClick={()=>setMode('register')}>Register</button></div><form onSubmit={submit}>{mode==='register'&&<input placeholder="Full name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>}<input type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input type="password" placeholder="Password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>{mode==='register'&&<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="student">Student</option><option value="teacher">Teacher</option></select>}<button className="primary">{mode==='login'?'Login':'Create account'}</button>{error&&<p className="error">{error}</p>}</form></div></div>
 }
 function Layout({user,onLogout,children}){return <><header><b>☁ Assignment Portal</b><span>{user.name} · {user.role}</span><button onClick={onLogout}>Logout</button></header><main>{children}</main></>}
